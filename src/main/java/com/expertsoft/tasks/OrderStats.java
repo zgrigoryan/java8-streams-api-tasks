@@ -113,13 +113,13 @@ class OrderStats {
      * @return java.util.Optional containing the name of the most popular country
      */
     static Optional<String> mostPopularCountry(final Stream<Customer> customers) {
-        Map<String, Long> countryCount = customers.collect(
-                Collectors.groupingBy(customer -> customer.getAddress().getCountry(), Collectors.counting())
-        );
 
-        return countryCount.entrySet().stream()
-                .max(Comparator.comparing((Map.Entry<String, Long> entry) -> entry.getValue())
-                        .thenComparing(entry -> entry.getKey().length(), Comparator.naturalOrder()))
+
+        return customers.collect(
+                Collectors.groupingBy(customer -> customer.getAddress().getCountry(), Collectors.counting()))
+                .entrySet().stream().max(Comparator
+                .comparing((Map.Entry<String, Long> entry) -> entry.getValue())
+                .thenComparing(entry -> entry.getKey().length(), Comparator.naturalOrder()))
                 .map(Map.Entry::getKey);
     }
 
@@ -144,26 +144,12 @@ class OrderStats {
      * @return average price of the product, ordered with the provided card
      */
     static BigDecimal averageProductPriceForCreditCard(final Stream<Customer> customers, final String cardNumber) {
-        BigDecimal[] totalPriceAndQuantity = customers
+        return customers
                 .flatMap(customer -> customer.getOrders().stream())
-                .filter(order -> order.getPaymentInfo().getCardNumber().equals(cardNumber))
+                .filter(order -> order.getPaymentInfo().equals(cardNumber))
                 .flatMap(order -> order.getOrderItems().stream())
-                .map(orderItem -> new BigDecimal[] {
-                        orderItem.getProduct().getPrice().multiply(BigDecimal.valueOf(orderItem.getQuantity())),
-                        BigDecimal.valueOf(orderItem.getQuantity())
-                })
-                .reduce(new BigDecimal[] {BigDecimal.ZERO, BigDecimal.ZERO},
-                        (subtotal, item) -> new BigDecimal[] {
-                                subtotal[0].add(item[0]),
-                                subtotal[1].add(item[1])
-                        });
-
-        return totalPriceAndQuantity[1].compareTo(BigDecimal.ZERO) > 0
-                ? totalPriceAndQuantity[0].divide(totalPriceAndQuantity[1], RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
+                .map(orderItem -> orderItem.getProduct().getPrice()
+                        .multiply(BigDecimal.valueOf(orderItem.getQuantity())))
+                .collect(new AveragingBigDecimalCollector());
     }
-
-
-
-
 }
